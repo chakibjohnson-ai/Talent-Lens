@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s \"http://localhost:5173/src/App.jsx\" -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s \"http://localhost:5173/@vite/client\" -o /dev/null -w \" vite:ok\")",
+      "Bash(npx vite build)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(curl -s http://localhost:5173/src/App.jsx)",
+      "Bash(nslookup supabase.co 8.8.8.8)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://cebpwkavlxipkrqixbab.supabase.co/auth/v1/health\")",
+      "Bash(npm install -D tailwindcss@3 postcss autoprefixer)",
+      "Bash(wc -l /Users/chakibjohnson/talentlens/src/components/*.jsx /Users/chakibjohnson/talentlens/src/components/*.js)",
+      "Bash(wc -l /Users/chakibjohnson/talentlens/src/components/*.jsx)",
+      "Bash(npx eslint src/utils/analyseUtils.js src/components/AnalyseView.jsx --max-warnings=0)",
+      "Bash(npx eslint src/utils/analyseUtils.js --max-warnings=0)",
+      "Bash(ls -la /Users/chakibjohnson/talentlens/.env*)",
+      "Bash(/Users/chakibjohnson/talentlens/.env:*)",
+      "Bash(/Users/chakibjohnson/talentlens/.gitignore:*)",
+      "Bash(npx vite build --mode development)",
+      "Bash(grep -o 'bg-emerald-600\\\\|bg-slate-800\\\\|bg-slate-900\\\\|bg-slate-950\\\\|rounded-xl\\\\|shadow-2xl\\\\|border-slate-700\\\\|border-slate-800' dist/assets/index-*.css)",
+      "Bash(npm install framer-motion)",
+      "Bash(supabase migration new seed_daily_facts)",
+      "Bash(npx supabase --version)",
+      "Bash(npx supabase migration new seed_daily_facts)",
+      "Bash(npx supabase db push)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(grep -r \"vacature\\\\|vacancy\" /Users/chakibjohnson/talentlens/src/ --include=*.jsx --include=*.js)",
+      "Bash(grep -r \"SECURITY DEFINER\\\\|DROP RLS\\\\|grant\\\\|GRANT\" /Users/chakibjohnson/talentlens/supabase/migrations/*.sql)",
+      "Bash(grep -r \"console\\\\.\\\\|localStorage\\\\|sessionStorage\\\\|window\\\\.\" /Users/chakibjohnson/talentlens/src/services/*.js)",
+      "Bash(xargs cat:*)",
+      "Bash(grep -rn \"encodeURIComponent\" /Users/chakibjohnson/talentlens/src/services/*.js)",
+      "Bash(grep -rn \"atob\\\\|btoa\\\\|JSON.parse\" /Users/chakibjohnson/talentlens/src/services/*.js /Users/chakibjohnson/talentlens/src/App.jsx)",
+      "Bash(grep -n \"text\\(\\)\\\\|json\\(\\)\" /Users/chakibjohnson/talentlens/src/services/*.js)",
+      "Bash(grep -rn \"innerHTML\\\\|dangerouslySetInnerHTML\" /Users/chakibjohnson/talentlens/src/components/*.jsx)",
+      "Bash(find /Users/chakibjohnson/talentlens/src -type f \\\\\\(-name *.jsx -o -name *.js -o -name *.ts -o -name *.sql \\\\\\))",
+      "Bash(find /Users/chakibjohnson/talentlens -path */node_modules -prune -o -type f -name *.sql -print)",
+      "Bash(grep -l \"analyses\\\\|candidates\" /Users/chakibjohnson/talentlens/supabase/migrations/*.sql)"
+    ]
+  }
+}

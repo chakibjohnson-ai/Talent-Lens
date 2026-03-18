@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TalentLens 2026 — Design System Tokens
+   "Slate Emerald" kleurenpalet
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Light mode tokens ─────────────────────────────────────────────────── */
+:root {
+  /* Achtergronden */
+  --bg-base:    #f6f8fa;
+  --bg-surface: #ffffff;
+  --bg-raised:  #f0f3f8;
+  --bg-hover:   #e8edf5;
+
+  /* Borders */
+  --border-subtle:  #e8edf5;
+  --border-default: #d0d7de;
+  --border-strong:  #b0bec5;
+
+  /* Typografie */
+  --text-strong: #0f172a;
+  --text-base:   #374151;
+  --text-muted:  #9ca3af;
+
+  /* Primary — Emerald (donkerder voor licht oppervlak) */
+  --primary:        #059669;
+  --primary-soft:   rgba(5, 150, 105, 0.08);
+  --primary-dim:    #047857;
+  --primary-strong: #065f46;
+
+  /* Glow (minder intens in light mode) */
+  --primary-glow-sm: rgba(5, 150, 105, 0.15);
+  --primary-glow:    rgba(5, 150, 105, 0.22);
+  --primary-glow-lg: rgba(5, 150, 105, 0.12);
+
+  /* Accent — Amber/Saffron */
+  --accent:      #f59e0b;
+  --accent-soft: rgba(245, 158, 11, 0.10);
+
+  /* Status */
+  --danger:  #ef4444;
+  --warning: #f59e0b;
+  --success: #10b981;
+}
+
+/* ─── Dark mode tokens ──────────────────────────────────────────────────── */
+.dark {
+  /* Achtergronden */
+  --bg-base:    #07090e;
+  --bg-surface: #0d1117;
+  --bg-raised:  #161b22;
+  --bg-hover:   #1c2333;
+
+  /* Borders */
+  --border-subtle:  #1a2332;
+  --border-default: #253348;
+  --border-strong:  #2d4160;
+
+  /* Typografie */
+  --text-strong: #f0f6fc;
+  --text-base:   #8b9eb7;
+  --text-muted:  #4a5568;
+
+  /* Primary — Emerald (helderder op donker oppervlak) */
+  --primary:        #10b981;
+  --primary-soft:   rgba(16, 185, 129, 0.10);
+  --primary-dim:    #059669;
+  --primary-strong: #34d399;
+
+  /* Glow */
+  --primary-glow-sm: rgba(16, 185, 129, 0.18);
+  --primary-glow:    rgba(16, 185, 129, 0.28);
+  --primary-glow-lg: rgba(16, 185, 129, 0.12);
+
+  /* Accent — Amber/Saffron */
+  --accent:      #fbbf24;
+  --accent-soft: rgba(251, 191, 36, 0.10);
+
+  /* Status */
+  --danger:  #f87171;
+  --warning: #fbbf24;
+  --success: #34d399;
+}
+
+/* ─── Base resets ───────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--bg-base);
+    color: var(--text-base);
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+}
