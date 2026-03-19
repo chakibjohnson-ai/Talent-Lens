@@ -69,12 +69,11 @@ interface WebhookPayload {
 /** Schrijft een fout naar cv_analysis_jobs en logt het lokaal. */
 async function failJob(jobId: string, message: string): Promise<void> {
   console.error(`[job:${jobId}] FOUT:`, message);
-  await supabaseAdmin
+  const { error: dbErr } = await supabaseAdmin
     .from('cv_analysis_jobs')
     .update({ status: 'error', error_message: message })
-    .eq('id', jobId)
-    .throwOnError()
-    .catch(e => console.error(`[job:${jobId}] Kon fout niet opslaan in DB:`, e));
+    .eq('id', jobId);
+  if (dbErr) console.error(`[job:${jobId}] Kon fout niet opslaan in DB:`, dbErr);
 }
 
 /**
