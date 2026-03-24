@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { parseSearchQuery, saveSearchProfile } from '../services/profileScoutService';
 import { generateOutreach, CHANNELS, FILTER_TYPES } from '../services/ghostwriterService';
+import { callClaude } from '../lib/claudeClient';
 
 // ── Mini spinner ──────────────────────────────────────────────────────────────
 function Spin({ color = 'rgba(167,139,250,0.9)' }) {
@@ -88,23 +89,15 @@ export function ProfileScoutView({ user, onGoToBoolean }) {
     const prompt = buildBooleanPrompt(parsed, query);
 
     try {
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
-        body: JSON.stringify({
+      const data = await callClaude(
+        {
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 1200,
           system: BOOL_SYS,
           messages: [{ role: 'user', content: prompt }],
-        }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(data?.error?.message || `API fout (${resp.status})`);
+        },
+        apiKey,
+      );
       const raw = data.content?.[0]?.text?.trim() || '{}';
       let parsed_bool;
       try { parsed_bool = JSON.parse(raw); } catch { throw new Error('Kon boolean niet verwerken.'); }

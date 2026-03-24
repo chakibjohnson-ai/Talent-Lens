@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabaseClient';
 import { validateAndSaveAnalysis, fetchAllAnalyses, lockAnalysis } from '../services/analysisService';
 import { generateOutreach, fetchMarketData, fetchWritingStyle, CHANNELS, FILTER_TYPES } from '../services/ghostwriterService';
 import { uploadAndCreateJob, subscribeToJobs, unsubscribeFromJobs } from '../services/cvUploadService';
+import { callClaude } from '../lib/claudeClient';
 
 function Spin() {
   return <span style={{display:"inline-block",width:11,height:11,border:"2px solid rgba(255,255,255,0.25)",borderTopColor:"white",borderRadius:"50%",animation:"s 0.7s linear infinite",marginRight:6}}/>;
@@ -242,27 +243,11 @@ export function AnalyseView({ user, crmSkills, verticals: verList, roles, indust
       apiKeySet:   !!apiKey,
     });
 
-    const headers = {
-      "Content-Type":                             "application/json",
-      "x-api-key":                                apiKey,
-      "anthropic-dangerous-direct-browser-access":"true",
-      "anthropic-version":                        "2023-06-01",
-      ...(useCaching ? { "anthropic-beta": "prompt-caching-2024-07-31" } : {}),
-    };
-
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:maxTokens, system, messages }),
-    });
-
-    // Body altijd uitlezen — ook bij foutresponse
-    const data = await resp.json().catch(() => ({}));
-
-    if (!resp.ok) {
-      console.error("[TL] API fout:", resp.status, data);
-      throw new Error(apiErrorMessage(resp.status, data));
-    }
+    const data = await callClaude(
+      { model: "claude-haiku-4-5-20251001", max_tokens: maxTokens, system, messages },
+      apiKey,
+      { cache: useCaching },
+    );
 
     console.log("[TL] API OK →", {
       stopReason:   data.stop_reason,
@@ -489,23 +474,15 @@ export function AnalyseView({ user, crmSkills, verticals: verList, roles, indust
       const sysPr = 'Je bent een expert recruiter. Gegeven een vacaturetekst en een kandidatenlijst, retourneer ALLEEN geldig JSON zonder uitleg: {"vacature":{"functie":null,"locatie":{"city":null,"region":null,"type":"unknown"},"sector":null,"vereiste_skills":[],"company":{"name":null,"logo_url":null}},"matches":[{"idx":1,"score":0,"reden":null}]}. LOCATIE-INSTRUCTIE: Als er een stad vermeld staat, vul city in en zet type op "city". Als er alleen een regio staat (bijv. "Randstad", "Noord-Holland"), laat city null en zet type op "region". Bij "remote" of "thuiswerken" zet type op "remote". Anders type "unknown". BEDRIJF-INSTRUCTIE: Extraheer de bedrijfsnaam uit de vacaturetekst. logo_url is altijd null (wordt apart bepaald). Sorteer matches op score aflopend.';
       const userMsg = `Vacature:\n${tekst.slice(0, 3000)}\n\nKandidaten (idx|naam|rol|exp|skills):\n${compressed}`;
 
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type":                              "application/json",
-          "x-api-key":                                 apiKey,
-          "anthropic-dangerous-direct-browser-access": "true",
-          "anthropic-version":                         "2023-06-01",
-        },
-        body: JSON.stringify({
+      const raw = await callClaude(
+        {
           model:      "claude-sonnet-4-6",
           max_tokens: 1200,
           system:     sysPr,
           messages:   [{ role: "user", content: userMsg }, { role: "assistant", content: "{" }],
-        }),
-      });
-      const raw = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(apiErrorMessage(resp.status, raw));
+        },
+        apiKey,
+      );
 
       const txt = (raw.content?.filter(b => b.type === "text").map(b => b.text).join("") || "");
       const p   = parseJSON(txt.trimStart().startsWith("{") ? txt : "{" + txt);

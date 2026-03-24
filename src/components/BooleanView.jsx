@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { fetchSavedBooleans, insertSavedBoolean, deleteSavedBoolean } from '../services/booleanService';
 import { parseJSON } from '../utils/analyseUtils';
+import { callClaude } from '../lib/claudeClient';
 
 const BOOL_SYS = `Expert Boolean search architect voor Medical Devices, Pharma, Healthcare, Life Sciences. Retourneer UITSLUITEND geldige JSON op 1 regel zonder backticks of uitleg.
 CRUCIALE JSON REGELS:
@@ -103,15 +104,8 @@ export function BooleanView({ user }) {
     if (!boolText.trim()) { setBoolErr("Plak een vacaturetekst."); return; }
     setBoolErr(""); setBoolLoading(true); setBoolResult(null); setBoolPlatform(null);
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": user.apiKey,
-          "anthropic-dangerous-direct-browser-access": "true",
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
+      const resp = await callClaude(
+        {
           model: "claude-haiku-4-5-20251001",
           max_tokens: 800,
           system: BOOL_SYS,
@@ -119,11 +113,10 @@ export function BooleanView({ user }) {
             { role: "user",      content: `Vacature:\n${boolText.trim()}` },
             { role: "assistant", content: "{" },
           ],
-        }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const d   = await resp.json();
-      const raw = d.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
+        },
+        user.apiKey,
+      );
+      const raw = resp.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
       const txt = raw.trimStart().startsWith("{") ? raw : "{" + raw;
       const p   = parseJSON(txt);
       if (!p) throw new Error("Geen JSON ontvangen. Probeer opnieuw.");

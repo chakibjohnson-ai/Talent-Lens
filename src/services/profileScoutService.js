@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { callClaude } from '../lib/claudeClient';
 
 // ── Locatie-mapping: regio → gerelateerde steden/termen ──────────────────────
 const LOCATION_MAP = {
@@ -60,24 +61,15 @@ Regels:
 - tags: overige relevante zoektermen (functies, skills, certificaten, etc.)
 - languages: gevraagde talen (bijv. ["Engels", "Duits"]), leeg als niet vermeld`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
+  const data = await callClaude(
+    {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       system,
       messages: [{ role: 'user', content: `Parseer: "${query}"` }],
-    }),
-  });
-
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data?.error?.message || `API fout (${resp.status})`);
+    },
+    apiKey,
+  );
 
   let raw = data.content?.[0]?.text?.trim() || '{}';
   // Strip eventuele markdown code blocks (```json ... ```)

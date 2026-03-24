@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { callClaude } from '../lib/claudeClient';
 
 // ── Kanaal- en stijlconfiguratie ─────────────────────────────────────────────
 export const CHANNELS = ['LinkedIn Connect', 'InMail', 'E-mail', 'Follow-up'];
@@ -91,24 +92,10 @@ ${sector ? `- Sector: ${sector}` : ''}
 ${locatie ? `- Locatie: ${locatie}` : ''}
 ${skills ? `- Vereiste skills: ${skills}` : ''}`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
-      system,
-      messages: [{ role: 'user', content: user }],
-    }),
-  });
-
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data?.error?.message || `API fout (${resp.status})`);
+  const data = await callClaude(
+    { model: 'claude-haiku-4-5-20251001', max_tokens: 600, system, messages: [{ role: 'user', content: user }] },
+    apiKey,
+  );
   return data.content?.[0]?.text?.trim() || '';
 }
 
@@ -162,15 +149,8 @@ ${ownContext ? '5. Vergelijk kort met onze eigen vacature' : ''}
 
 Schrijf max 4 korte alinea\'s. Gebruik bullet points waar nuttig. Vermeld als data beperkt is.`;
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
+  const data = await callClaude(
+    {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 500,
       system,
@@ -178,10 +158,8 @@ Schrijf max 4 korte alinea\'s. Gebruik bullet points waar nuttig. Vermeld als da
         role: 'user',
         content: `Zoekresultaten voor "${jobTitle} vacature ${region}":\n\n${snippets}${ownContext}`,
       }],
-    }),
-  });
-
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(data?.error?.message || `API fout (${resp.status})`);
+    },
+    apiKey,
+  );
   return data.content?.[0]?.text?.trim() || '';
 }

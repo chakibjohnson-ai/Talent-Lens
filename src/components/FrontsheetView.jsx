@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { parseJSON } from '../utils/analyseUtils';
 import { FeedbackWidget } from './FeedbackWidget';
 import { DEMO_MODUS } from '../constants/appConstants';
+import { callClaude } from '../lib/claudeClient';
 
 function Spin() {
   return <span style={{display:"inline-block",width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"white",borderRadius:"50%",animation:"s 0.7s linear infinite",marginRight:7}}/>;
@@ -152,15 +153,8 @@ export function FrontsheetView({ user, history = [], onSaveGem }) {
     }
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": user.apiKey,
-          "anthropic-dangerous-direct-browser-access": "true",
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
+      const d   = await callClaude(
+        {
           model: "claude-haiku-4-5-20251001",
           max_tokens: 2000,
           system: buildFrontSys(frontType, frontLang, frontCrmId),
@@ -168,10 +162,9 @@ export function FrontsheetView({ user, history = [], onSaveGem }) {
             { role: "user",      content: `Kandidaatinformatie:\n${inputContext}` },
             { role: "assistant", content: "{" },
           ],
-        }),
-      });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const d   = await resp.json();
+        },
+        user.apiKey,
+      );
       const raw = "{" + (d.content?.filter(b => b.type === "text").map(b => b.text).join("") || "");
       const p   = parseJSON(raw);
       if (!p) throw new Error("Geen geldige JSON ontvangen.");
