@@ -29,7 +29,13 @@ export async function sbSignIn(email, password) {
  * @returns {object|null}       - Profiel-object of null als niet gevonden
  */
 export async function sbGetProfile(accessToken) {
-  const email = JSON.parse(atob(accessToken.split('.')[1])).email;
+  let email;
+  try {
+    email = JSON.parse(atob(accessToken.split('.')[1])).email;
+  } catch {
+    throw new Error('Ongeldig access token — kan e-mail niet uitlezen.');
+  }
+  if (!email) throw new Error('Access token bevat geen e-mailadres.');
   const r = await fetch(
     `${SUPABASE_URL}/rest/v1/user_profiles` +
     `?email=eq.${encodeURIComponent(email)}` +
@@ -50,7 +56,7 @@ export async function sbGetProfile(accessToken) {
  * @param {object} fields       - Velden om te updaten, bijv. { naam, locatie, uurloon }
  */
 export async function sbSaveProfile(accessToken, email, fields) {
-  await fetch(
+  const r = await fetch(
     `${SUPABASE_URL}/rest/v1/user_profiles?email=eq.${encodeURIComponent(email)}`,
     {
       method:  'PATCH',
@@ -58,4 +64,8 @@ export async function sbSaveProfile(accessToken, email, fields) {
       body:    JSON.stringify(fields),
     }
   );
+  if (!r.ok) {
+    const body = await r.json().catch(() => ({}));
+    throw new Error(body?.message || body?.error || `Profiel opslaan mislukt (HTTP ${r.status}).`);
+  }
 }

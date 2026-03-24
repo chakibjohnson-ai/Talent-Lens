@@ -23,7 +23,7 @@ const CHANNEL_GUIDANCE = {
 export async function saveWritingStyle(userId, sample) {
   const { error } = await supabase
     .from('user_settings')
-    .upsert({ user_id: userId, writing_style_sample: sample, updated_at: new Date().toISOString() },
+    .upsert({ user_id: userId, writing_style_sample: sample },
             { onConflict: 'user_id' });
   if (error) throw new Error(error.message);
 }
@@ -137,8 +137,8 @@ export async function fetchMarketData(jobTitle, region, apiKey, ownVacancy = nul
     );
     if (searchResp.ok) {
       const text = await searchResp.text();
-      // Neem max 3000 tekens van de resultaten
-      snippets = text.slice(0, 3000);
+      // Neem max 1500 tekens — voldoende voor salaris/skills/arbeidsvoorwaarden
+      snippets = text.slice(0, 1500);
     }
   } catch (_) {
     throw new Error('Zoekservice niet bereikbaar. Controleer je internetverbinding.');

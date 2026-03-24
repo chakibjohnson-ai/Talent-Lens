@@ -240,7 +240,6 @@ export function AnalyseView({ user, crmSkills, verticals: verList, roles, indust
       systemChars: JSON.stringify(system).length,
       userChars:   JSON.stringify(messages).length,
       apiKeySet:   !!apiKey,
-      apiKeyPrefix: apiKey.slice(0, 16) + "…",
     });
 
     const headers = {

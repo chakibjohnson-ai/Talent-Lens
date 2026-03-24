@@ -1,4 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, Fragment } from 'react';
+
+/** Rendert tekst met <strong>...</strong> tags als React-elementen (geen dangerouslySetInnerHTML). */
+function RenderBold({ text, style }) {
+  const parts = text.split(/(<strong>.*?<\/strong>)/g);
+  return (
+    <p style={style}>
+      {parts.map((part, i) => {
+        const match = part.match(/^<strong>(.*?)<\/strong>$/);
+        return match ? <strong key={i}>{match[1]}</strong> : <Fragment key={i}>{part}</Fragment>;
+      })}
+    </p>
+  );
+}
 
 export function SalesToolkit({ result, accent, onSaveGem }) {
   const [actionContent, setActionContent] = useState(null);
@@ -101,7 +114,7 @@ export function SalesToolkit({ result, accent, onSaveGem }) {
             {actionContent.map((block, i) => (
               <div key={i} style={{marginBottom: i < actionContent.length - 1 ? 12 : 0}}>
                 <p style={{fontSize:10,fontWeight:700,color:actionType==="call"?c:"rgba(192,132,252,0.8)",margin:"0 0 4px",letterSpacing:0.8,textTransform:"uppercase"}}>{block.label}</p>
-                <p style={{fontSize:12,color:"rgba(255,255,255,0.72)",margin:0,lineHeight:1.7,fontWeight:400}} dangerouslySetInnerHTML={{__html: block.text}}/>
+                <RenderBold text={block.text} style={{fontSize:12,color:"rgba(255,255,255,0.72)",margin:0,lineHeight:1.7,fontWeight:400}}/>
               </div>
             ))}
           </div>

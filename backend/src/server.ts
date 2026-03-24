@@ -12,10 +12,12 @@
  */
 
 import 'dotenv/config';
+import { timingSafeEqual } from 'crypto';
 import express, { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
+import type { Database, CvAnalysisResult, WebhookPayload } from './types/database.types';
 
 // ─── Omgevingsvariabelen valideren ────────────────────────────────────────────
 
@@ -34,35 +36,12 @@ for (const [key, val] of Object.entries({ SUPABASE_URL, SUPABASE_SERVICE_KEY, AN
 
 // ─── Supabase admin client (service role — geen RLS) ─────────────────────────
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-interface CvAnalysisResult {
-  korte_samenvatting: string | null;
-  werkervaring_jaren: number | null;
-  opleidingen: string[];
-  talen: string[];
-  hard_skills: string[];
-  soft_skills: string[];
-}
-
-/** Payload die Supabase Database Webhooks sturen bij een INSERT event */
-interface WebhookPayload {
-  type: 'INSERT' | 'UPDATE' | 'DELETE';
-  table: string;
-  schema: string;
-  record: {
-    id: string;
-    user_id: string;
-    file_path: string;
-    file_name: string;
-    status: string;
-  };
-  old_record: null | Record<string, unknown>;
-}
+// CvAnalysisResult en WebhookPayload zijn geïmporteerd uit ./types/database.types
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -124,14 +103,16 @@ async function extractText(buffer: Buffer, fileName: string): Promise<string> {
   throw new Error(`Niet-ondersteund bestandsformaat: "${fileName}". Gebruik PDF of DOCX.`);
 }
 
-/** Pre-processing: reduce whitespace voor kostenbesparing bij de API-call. */
+/** Pre-processing: verwijder overbodige whitespace en non-printable tekens. */
 function cleanText(raw: string): string {
   return raw
-    .replace(/[ \t]+/g, ' ')
+    // Vervang alle horizontale whitespace (spaties/tabs) door één spatie,
+    // behoud newlines zodat de regex hierna ze apart kan normaliseren.
+    .replace(/[^\S\n]+/g, ' ')
+    // Drie of meer opeenvolgende newlines → twee (maximaal één lege regel).
     .replace(/\n{3,}/g, '\n\n')
-    .replace(/[^\S\n]*\n[^\S\n]*/g, '\n')
+    // Non-printable/non-Latin tekens naar spatie (behoudt ASCII + Latin Extended).
     .replace(/[^\x20-\x7E\n\r\u00C0-\u024F]/g, ' ')
-    .replace(/ +/g, ' ')
     .trim();
 }
 
@@ -238,10 +219,18 @@ app.get('/health', (_req: Request, res: Response) => {
 app.post(
   '/webhook/cv-job',
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    // ── 1. Webhook-secret validatie ────────────────────────────────────────────
+    // ── 1. Webhook-secret + Content-Type validatie ─────────────────────────────
     const secret = req.headers['x-webhook-secret'];
-    if (secret !== WEBHOOK_SECRET) {
+    const secretValid =
+      typeof secret === 'string' &&
+      secret.length === WEBHOOK_SECRET.length &&
+      timingSafeEqual(Buffer.from(secret, 'utf8'), Buffer.from(WEBHOOK_SECRET, 'utf8'));
+    if (!secretValid) {
       res.status(401).json({ error: 'Ongeldig webhook secret.' });
+      return;
+    }
+    if (!req.headers['content-type']?.includes('application/json')) {
+      res.status(415).json({ error: 'Content-Type moet application/json zijn.' });
       return;
     }
 

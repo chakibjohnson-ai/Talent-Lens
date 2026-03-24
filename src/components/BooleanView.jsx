@@ -113,7 +113,7 @@ export function BooleanView({ user }) {
         },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 2500,
+          max_tokens: 800,
           system: BOOL_SYS,
           messages: [
             { role: "user",      content: `Vacature:\n${boolText.trim()}` },
