@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SUPABASE_URL, SB_HEADERS } from '../lib/supabaseClient';
 import { sbSaveProfile } from '../services/authService';
-import { saveWritingStyle, fetchWritingStyle } from '../services/ghostwriterService';
+import { saveWritingStyle, fetchWritingStyle, saveOfficeZip, fetchOfficeZip } from '../services/ghostwriterService';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,6 +106,12 @@ export function InstellingenView({ user, onUserUpdate }) {
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeErr,     setStripeErr]     = useState('');
 
+  // ── Kantoorpostcode state ──
+  const [officeZip,     setOfficeZip]     = useState('');
+  const [zipSaving,     setZipSaving]     = useState(false);
+  const [zipOk,         setZipOk]         = useState(false);
+  const [zipErr,        setZipErr]        = useState('');
+
   // ── Tone of Voice state ──
   const [tovSample,  setTovSample]  = useState('');
   const [tovSaving,  setTovSaving]  = useState(false);
@@ -115,7 +121,22 @@ export function InstellingenView({ user, onUserUpdate }) {
   useEffect(() => {
     if (!user?.id) return;
     fetchWritingStyle(user.id).then(s => { if (s) setTovSample(s); }).catch(() => {});
+    fetchOfficeZip(user.id).then(z => { if (z) setOfficeZip(z); }).catch(() => {});
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saveZip() {
+    if (!user?.id) return;
+    setZipSaving(true); setZipErr(''); setZipOk(false);
+    try {
+      await saveOfficeZip(user.id, officeZip);
+      setZipOk(true);
+      setTimeout(() => setZipOk(false), 3000);
+    } catch (e) {
+      setZipErr(e.message || 'Opslaan mislukt.');
+    } finally {
+      setZipSaving(false);
+    }
+  }
 
   async function saveTov() {
     if (!user?.id) return;
@@ -547,6 +568,55 @@ export function InstellingenView({ user, onUserUpdate }) {
           </div>
         </Card>
       )}
+
+      {/* ── KANTOORPOSTCODE ── */}
+      <Card>
+        <SectionTitle>📍 Kantoorlocatie</SectionTitle>
+        <p style={{ fontSize:13, color:'rgba(255,255,255,0.45)', margin:'0 0 14px', lineHeight:1.65 }}>
+          Vul de postcode van jouw kantoor in. Deze wordt gebruikt om automatisch de reistijd van kandidaten te berekenen.
+        </p>
+        <div style={{ display:'flex', gap:8 }}>
+          <input
+            type="text"
+            value={officeZip}
+            onChange={e => setOfficeZip(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === 'Enter' && saveZip()}
+            placeholder="bijv. 3511 BN (Utrecht) of 1012 AB (Amsterdam)"
+            maxLength={7}
+            style={{
+              flex:1, background:'rgba(255,255,255,0.05)',
+              border:'1px solid rgba(255,255,255,0.1)',
+              borderRadius:10, color:'rgba(255,255,255,0.88)',
+              padding:'10px 14px', fontSize:13, outline:'none',
+              fontFamily:'Inter,sans-serif', letterSpacing:0.5,
+            }}
+          />
+          <button
+            onClick={saveZip}
+            disabled={zipSaving || !officeZip.trim()}
+            style={{
+              background: zipSaving || !officeZip.trim()
+                ? 'rgba(255,255,255,0.04)'
+                : `linear-gradient(135deg,${T.accentDark || '#217A40'},${T.accentMid || '#2FA854'})`,
+              border:'none',
+              color: zipSaving || !officeZip.trim() ? 'rgba(255,255,255,0.25)' : 'white',
+              borderRadius:10, padding:'10px 20px', fontSize:13, fontWeight:600,
+              cursor: zipSaving || !officeZip.trim() ? 'not-allowed' : 'pointer',
+              whiteSpace:'nowrap', transition:'all 0.2s',
+            }}>
+            {zipSaving ? '⏳ Opslaan…' : '💾 Opslaan'}
+          </button>
+        </div>
+        <div style={{ marginTop:10, display:'flex', alignItems:'center', gap:12 }}>
+          {zipOk  && <span style={{ fontSize:13, color:'#34d399' }}>✓ Opgeslagen</span>}
+          {zipErr && <span style={{ fontSize:13, color:'rgba(248,113,113,0.9)' }}>⚠️ {zipErr}</span>}
+          {!zipOk && !zipErr && (
+            <span style={{ fontSize:11, color:'rgba(255,255,255,0.2)' }}>
+              Per recruiter opgeslagen — elke gebruiker vult zijn eigen kantoorlocatie in.
+            </span>
+          )}
+        </div>
+      </Card>
 
       {/* ── TONE OF VOICE ── */}
       <Card>

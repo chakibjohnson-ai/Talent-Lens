@@ -50,6 +50,44 @@ export interface ExtractedSkills {
   raw_keywords?:  string[];
 }
 
+// ─── Enrichment result-types (gedeeld met background-enrichment.service) ─────
+
+export interface TravelTimeResult {
+  duration_minutes: number | null;
+  distance_km:      number | null;
+  mode:             'driving';
+}
+
+export interface SalaryIndicationResult {
+  min_gross_annual: number | null;
+  max_gross_annual: number | null;
+  currency:         string;
+  source:           string;
+}
+
+/** Gestructureerde kandidaat-rij inclusief enrichment-kolommen */
+export interface CandidateRow {
+  id:                 string;
+  recruiter_id:       string | null;
+  user_id:            string | null;
+  team_id:            string | null;
+  organization_id:    string | null;
+  first_name:         string | null;
+  last_name:          string | null;
+  job_title:          string | null;
+  company_name:       string | null;
+  zip_code:           string | null;
+  raw_text:           string | null;
+  /** Reistijd-data (Mapbox) — JSONB in DB */
+  travel_time:        TravelTimeResult | null;
+  /** Publieke logo-URL (Brandfetch/Clearbit) */
+  company_logo_url:   string | null;
+  /** Salarisrange (Adzuna) — JSONB in DB */
+  salary_indication:  SalaryIndicationResult | null;
+  created_at:         string;
+  updated_at:         string | null;
+}
+
 // ─── Webhook-payload types ────────────────────────────────────────────────────
 
 export interface CvJobWebhookRecord {
@@ -290,9 +328,45 @@ export interface Database {
       };
 
       candidates: {
+        // Row blijft Record<string, unknown>: een specifieke interface zonder
+        // index-signature is niet compatibel met Supabase's GenericTable-constraint,
+        // wat alle .update()-calls naar `never` reduceert. Gebruik CandidateRow
+        // als cast-type na een .select()-query.
         Row:    Record<string, unknown>;
-        Insert: Record<string, unknown>;
-        Update: Record<string, unknown>;
+        Insert: {
+          id?:                string;
+          recruiter_id?:      string | null;
+          user_id?:           string | null;
+          team_id?:           string | null;
+          organization_id?:   string | null;
+          first_name?:        string | null;
+          last_name?:         string | null;
+          job_title?:         string | null;
+          company_name?:      string | null;
+          zip_code?:          string | null;
+          raw_text?:          string | null;
+          travel_time?:       TravelTimeResult | null;
+          company_logo_url?:  string | null;
+          salary_indication?: SalaryIndicationResult | null;
+          created_at?:        string;
+          updated_at?:        string | null;
+        };
+        Update: {
+          recruiter_id?:      string | null;
+          user_id?:           string | null;
+          team_id?:           string | null;
+          organization_id?:   string | null;
+          first_name?:        string | null;
+          last_name?:         string | null;
+          job_title?:         string | null;
+          company_name?:      string | null;
+          zip_code?:          string | null;
+          raw_text?:          string | null;
+          travel_time?:       TravelTimeResult | null;
+          company_logo_url?:  string | null;
+          salary_indication?: SalaryIndicationResult | null;
+          updated_at?:        string | null;
+        };
         Relationships: [];
       };
 
@@ -393,18 +467,21 @@ export interface Database {
         Row: {
           user_id:              string;
           writing_style_sample: string | null;
-          created_at:           string;  // added by VERIFY_AND_FIX_ALL
-          updated_at:           string;  // added by VERIFY_AND_FIX_ALL
+          office_zip_code:      string | null;
+          created_at:           string;
+          updated_at:           string;
         };
         Insert: {
           user_id:               string;
           writing_style_sample?: string | null;
+          office_zip_code?:      string | null;
           created_at?:           string;
           updated_at?:           string;
         };
         Update: {
           user_id?:              string;
           writing_style_sample?: string | null;
+          office_zip_code?:      string | null;
           created_at?:           string;
           updated_at?:           string;
         };

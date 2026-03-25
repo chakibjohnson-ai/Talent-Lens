@@ -20,6 +20,26 @@ const CHANNEL_GUIDANCE = {
   'Follow-up': 'Follow-up bericht na eerder contact (kort). Verwijs terug, voeg iets toe, vraag om reactie.',
 };
 
+// ── Kantoorpostcode opslaan ───────────────────────────────────────────────────
+export async function saveOfficeZip(userId, zip) {
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert({ user_id: userId, office_zip_code: zip.trim() },
+            { onConflict: 'user_id' });
+  if (error) throw new Error(error.message);
+}
+
+// ── Kantoorpostcode ophalen ───────────────────────────────────────────────────
+export async function fetchOfficeZip(userId) {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('office_zip_code')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.office_zip_code || '';
+}
+
 // ── Schrijfstijl opslaan ──────────────────────────────────────────────────────
 export async function saveWritingStyle(userId, sample) {
   const { error } = await supabase

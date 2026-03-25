@@ -17,7 +17,13 @@ import express, { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
+import { z } from 'zod';
 import type { Database, CvAnalysisResult, WebhookPayload } from './types/database.types';
+import {
+  getTravelTime,
+  getCompanyLogo,
+  getSalaryIndication,
+} from './services/background-enrichment.service';
 
 // ─── Omgevingsvariabelen valideren ────────────────────────────────────────────
 
@@ -26,6 +32,8 @@ const SUPABASE_SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const ANTHROPIC_API_KEY     = process.env.ANTHROPIC_API_KEY     ?? '';
 const WEBHOOK_SECRET        = process.env.WEBHOOK_SECRET        ?? '';
 const PORT                  = parseInt(process.env.PORT ?? '3001', 10);
+/** Kantoor-postcode voor reistijdberekening. Stel in via OFFICE_ZIP_CODE env var. */
+const OFFICE_ZIP_CODE       = process.env.OFFICE_ZIP_CODE       ?? '1012AB';
 
 for (const [key, val] of Object.entries({ SUPABASE_URL, SUPABASE_SERVICE_KEY, ANTHROPIC_API_KEY, WEBHOOK_SECRET })) {
   if (!val) {
@@ -50,7 +58,7 @@ async function failJob(jobId: string, message: string): Promise<void> {
   console.error(`[job:${jobId}] FOUT:`, message);
   const { error: dbErr } = await supabaseAdmin
     .from('cv_analysis_jobs')
-    .update({ status: 'error', error_message: message })
+    .update({ status: 'error' as const, error_message: message })
     .eq('id', jobId);
   if (dbErr) console.error(`[job:${jobId}] Kon fout niet opslaan in DB:`, dbErr);
 }
@@ -256,7 +264,7 @@ app.post(
       // Markeer als 'processing'
       await supabaseAdmin
         .from('cv_analysis_jobs')
-        .update({ status: 'processing' })
+        .update({ status: 'processing' as const })
         .eq('id', jobId)
         .throwOnError();
 
@@ -282,13 +290,151 @@ app.post(
       // Stap 4: Opslaan → triggert Realtime update naar frontend
       await supabaseAdmin
         .from('cv_analysis_jobs')
-        .update({ status: 'completed', result_data: resultData })
+        .update({ status: 'completed' as const, result_data: resultData })
         .eq('id', jobId)
         .throwOnError();
 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       await failJob(jobId, message);
+    }
+  },
+);
+
+// ── Candidate Enrichment Webhook ──────────────────────────────────────────────
+/**
+ * POST /api/webhooks/candidate-enrichment
+ *
+ * Aangeroepen door Supabase Database Webhook zodra een kandidaat wordt
+ * ingevoegd in de `candidates` tabel (INSERT event).
+ *
+ * Flow:
+ *   1. Verificeer webhook-secret header (timing-safe)
+ *   2. Valideer payload-structuur met Zod
+ *   3. Stuur 200 direct terug (Supabase-timeout vermijden)
+ *   4. Enrichment parallel: Mapbox + Brandfetch + Adzuna
+ *   5. Update candidates record via service-role client
+ *
+ * Supabase Dashboard configuratie:
+ *   Database → Webhooks → New Webhook
+ *   Table:   candidates  |  Events: INSERT
+ *   URL:     https://<server>/api/webhooks/candidate-enrichment
+ *   Headers: x-webhook-secret: <WEBHOOK_SECRET>
+ */
+
+// Zod-schema voor het `record` object uit de Supabase INSERT payload
+const CandidateRecordSchema = z.object({
+  id:           z.string().uuid(),
+  job_title:    z.string().nullable().optional(),
+  company_name: z.string().nullable().optional(),
+  zip_code:     z.string().nullable().optional(),
+  recruiter_id: z.string().uuid().nullable().optional(),
+});
+
+// Zod-schema voor de volledige Supabase webhook payload
+const CandidateWebhookPayloadSchema = z.object({
+  type:       z.enum(['INSERT', 'UPDATE', 'DELETE']),
+  table:      z.string(),
+  schema:     z.string(),
+  record:     CandidateRecordSchema,
+  old_record: CandidateRecordSchema.nullable().optional(),
+});
+
+type CandidateWebhookPayload = z.infer<typeof CandidateWebhookPayloadSchema>;
+
+app.post(
+  '/api/webhooks/candidate-enrichment',
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // ── 1. Webhook-secret verificatie (timing-safe) ───────────────────────────
+    const incomingSecret = req.headers['x-webhook-secret'];
+    const secretValid =
+      typeof incomingSecret === 'string' &&
+      incomingSecret.length === WEBHOOK_SECRET.length &&
+      timingSafeEqual(
+        Buffer.from(incomingSecret, 'utf8'),
+        Buffer.from(WEBHOOK_SECRET, 'utf8'),
+      );
+
+    if (!secretValid) {
+      res.status(401).json({ error: 'Ongeldig webhook secret.' });
+      return;
+    }
+
+    if (!req.headers['content-type']?.includes('application/json')) {
+      res.status(415).json({ error: 'Content-Type moet application/json zijn.' });
+      return;
+    }
+
+    // ── 2. Payload-validatie via Zod ─────────────────────────────────────────
+    const parseResult = CandidateWebhookPayloadSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      console.warn('[enrichment] Ongeldige payload:', parseResult.error.flatten());
+      res.status(400).json({ error: 'Ongeldige webhook payload.', details: parseResult.error.flatten() });
+      return;
+    }
+
+    const payload: CandidateWebhookPayload = parseResult.data;
+
+    // Alleen INSERT events op de candidates tabel verwerken
+    if (payload.type !== 'INSERT' || payload.table !== 'candidates') {
+      res.status(200).json({ skipped: true, reason: 'Geen INSERT op candidates.' });
+      return;
+    }
+
+    const { id: candidateId, job_title, company_name, zip_code, recruiter_id } = payload.record;
+
+    // ── 3. Stuur 200 direct terug (Supabase wacht max ~5s) ───────────────────
+    res.status(200).json({ received: true, candidateId });
+
+    // ── 4 + 5. Enrichment parallel + database-update (na de response) ────────
+    try {
+      console.log(`[enrichment:${candidateId}] Start parallel enrichment…`);
+
+      // Haal kantoorpostcode op uit user_settings van de recruiter.
+      // Fallback op OFFICE_ZIP_CODE env var als de gebruiker hem nog niet heeft ingesteld.
+      let officeZip = OFFICE_ZIP_CODE;
+      if (recruiter_id) {
+        const { data: settings } = await supabaseAdmin
+          .from('user_settings')
+          .select('office_zip_code')
+          .eq('user_id', recruiter_id)
+          .maybeSingle();
+        if (settings?.office_zip_code) {
+          officeZip = settings.office_zip_code as string;
+        }
+      }
+
+      const [travelResult, logoResult, salaryResult] = await Promise.all([
+        getTravelTime(zip_code ?? '', officeZip),
+        getCompanyLogo(company_name ?? ''),
+        getSalaryIndication(job_title ?? ''),
+      ]);
+
+      console.log(`[enrichment:${candidateId}] Resultaten:`, {
+        travel_minutes: travelResult.duration_minutes,
+        logo_found:     !!logoResult.logo_url,
+        salary_min:     salaryResult.min_gross_annual,
+      });
+
+      // ── 6. Update candidates via service-role (bypast RLS) ─────────────────
+      const { error: updateError } = await supabaseAdmin
+        .from('candidates')
+        .update({
+          travel_time:        travelResult,
+          company_logo_url:   logoResult.logo_url,
+          salary_indication:  salaryResult,
+        })
+        .eq('id', candidateId);
+
+      if (updateError) {
+        console.error(`[enrichment:${candidateId}] DB-update mislukt:`, updateError.message);
+      } else {
+        console.log(`[enrichment:${candidateId}] Succesvol opgeslagen.`);
+      }
+    } catch (err: unknown) {
+      // Fatale fout (bijv. netwerk volledig down) — logt maar stopt de server niet
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[enrichment:${candidateId}] Onverwachte fout:`, message);
     }
   },
 );
