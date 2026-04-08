@@ -47,7 +47,7 @@ export function expandLocation(location) {
  * @param {string} apiKey    - Anthropic API key
  * @returns {Promise<{min_experience: number|null, sector: string|null, regions: string[], tags: string[], languages: string[]}>}
  */
-export async function parseSearchQuery(query, apiKey) {
+export async function parseSearchQuery(query, _apiKey) {
   if (!query?.trim()) throw new Error('Zoekopdracht is leeg');
 
   const system = `Je bent een recruitment search parser. Extraheer gestructureerde entiteiten uit een Nederlandse zoekopdracht voor kandidaten. Retourneer UITSLUITEND geldige JSON op 1 regel zonder uitleg of backticks.
@@ -68,7 +68,7 @@ Regels:
       system,
       messages: [{ role: 'user', content: `Parseer: "${query}"` }],
     },
-    apiKey,
+    null,
   );
 
   let raw = data.content?.[0]?.text?.trim() || '{}';

@@ -163,7 +163,7 @@ export function FrontsheetView({ user, history = [], onSaveGem }) {
             { role: "assistant", content: "{" },
           ],
         },
-        user.apiKey,
+        null,
       );
       const raw = "{" + (d.content?.filter(b => b.type === "text").map(b => b.text).join("") || "");
       const p   = parseJSON(raw);

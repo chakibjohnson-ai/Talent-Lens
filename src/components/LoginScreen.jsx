@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DOMAIN_THEMES, DEFAULT_THEME, DOMAIN_BANNER, ANTHROPIC_API_KEY } from '../constants/appConstants';
+import { DOMAIN_THEMES, DEFAULT_THEME, DOMAIN_BANNER } from '../constants/appConstants';
 import { sbSignIn, sbGetProfile, SB_SESSION_KEY } from '../services/authService';
 
 // ── Static CSS — module-level zodat het precies één keer geïnjecteerd wordt
@@ -166,7 +166,6 @@ export function LoginScreen({ onLogin, logo }) {
         email:       email.trim(),
         domain,
         isAdmin:     profile?.is_org_admin || profile?.is_team_admin || false,
-        apiKey:      ANTHROPIC_API_KEY,
         accessToken: session.access_token,
         profile,
       }), 600);

@@ -4,7 +4,6 @@ import { SaveGemModal } from './SaveGemModal';
 import { buildSystemPrompt, parseJSON, vColor } from '../utils/analyseUtils';
 import {
   VERTICAL_COLORS, DEMO_MODUS,
-  ANTHROPIC_API_KEY,
 } from '../constants/appConstants';
 import { supabase } from '../lib/supabaseClient';
 import { validateAndSaveAnalysis, fetchAllAnalyses, lockAnalysis } from '../services/analysisService';
@@ -216,8 +215,6 @@ export function AnalyseView({ user, crmSkills, verticals: verList, roles, indust
     });
   }, [history, fVertical, fRol, fLoc, fActive]);
 
-  const apiKey = user?.apiKey || ANTHROPIC_API_KEY;
-
   // ── Vertaal HTTP-statuscodes naar leesbare Nederlandse foutmeldingen ────────
   function apiErrorMessage(status, body) {
     const detail = body?.error?.message || "";
@@ -231,21 +228,11 @@ export function AnalyseView({ user, crmSkills, verticals: verList, roles, indust
     return `Onbekende API-fout (HTTP ${status}). ${detail}`;
   }
 
-  // ── Centrale fetch naar Anthropic — geeft direct geparsde data terug ────────
+  // ── Centrale fetch via claude-proxy Edge Function ────────────────────────────
   async function callAPI(system, messages, maxTokens = 2000, useCaching = false) {
-    if (!apiKey) throw new Error("🔑 Geen API key gevonden. Voeg VITE_ANTHROPIC_API_KEY toe aan je .env bestand.");
-
-    console.log("[TL] callAPI →", {
-      model: "claude-haiku-4-5-20251001",
-      maxTokens,
-      systemChars: JSON.stringify(system).length,
-      userChars:   JSON.stringify(messages).length,
-      apiKeySet:   !!apiKey,
-    });
-
     const data = await callClaude(
       { model: "claude-haiku-4-5-20251001", max_tokens: maxTokens, system, messages },
-      apiKey,
+      null,
       { cache: useCaching },
     );
 
@@ -481,7 +468,7 @@ export function AnalyseView({ user, crmSkills, verticals: verList, roles, indust
           system:     sysPr,
           messages:   [{ role: "user", content: userMsg }, { role: "assistant", content: "{" }],
         },
-        apiKey,
+        null,
       );
 
       const txt = (raw.content?.filter(b => b.type === "text").map(b => b.text).join("") || "");
@@ -532,7 +519,7 @@ export function AnalyseView({ user, crmSkills, verticals: verList, roles, indust
     if (!functie) { setMarktErr('Geen functietitel beschikbaar in de vacature.'); return; }
     setMarktLoading(true); setMarktErr(''); setMarktData('');
     try {
-      const samenvatting = await fetchMarketData(functie, locatie, apiKey, vacResult?.vacature_samenvatting);
+      const samenvatting = await fetchMarketData(functie, locatie, null, vacResult?.vacature_samenvatting);
       setMarktData(samenvatting);
     } catch (e) {
       setMarktErr(e.message || 'Marktdata ophalen mislukt.');
@@ -555,7 +542,7 @@ export function AnalyseView({ user, crmSkills, verticals: verList, roles, indust
         style_source:         outreachStyleSource,
         filter_type:          outreachFilterType,
         writing_style_sample: writingSample,
-        apiKey,
+        apiKey: null,
       });
       setOutreachText(tekst);
     } catch (e) {

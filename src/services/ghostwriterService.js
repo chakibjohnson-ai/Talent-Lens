@@ -68,7 +68,6 @@ export async function fetchWritingStyle(userId) {
  * @param {'filter'|'user_sample'} params.style_source
  * @param {string} params.filter_type        - bijv. 'Corporate'
  * @param {string} params.writing_style_sample - eigen tekstvoorbeeld van gebruiker
- * @param {string} params.apiKey             - Anthropic API key
  * @returns {Promise<string>}                - gegenereerd bericht
  */
 export async function generateOutreach({
@@ -77,7 +76,6 @@ export async function generateOutreach({
   style_source,
   filter_type,
   writing_style_sample,
-  apiKey,
 }) {
   const channelGuide = CHANNEL_GUIDANCE[channel] || '';
   const functie      = vacancy_data?.functie || 'de functie';
@@ -114,7 +112,7 @@ ${skills ? `- Vereiste skills: ${skills}` : ''}`;
 
   const data = await callClaude(
     { model: 'claude-haiku-4-5-20251001', max_tokens: 600, system, messages: [{ role: 'user', content: user }] },
-    apiKey,
+    null,
   );
   return data.content?.[0]?.text?.trim() || '';
 }
@@ -123,11 +121,10 @@ ${skills ? `- Vereiste skills: ${skills}` : ''}`;
 /**
  * @param {string} jobTitle   - bijv. "QA Manager"
  * @param {string} region     - bijv. "Amsterdam"
- * @param {string} apiKey     - Anthropic API key
  * @param {object} ownVacancy - onze eigen vacature_samenvatting (optioneel, voor vergelijking)
  * @returns {Promise<string>} - AI-samenvatting van de markt
  */
-export async function fetchMarketData(jobTitle, region, apiKey, ownVacancy = null) {
+export async function fetchMarketData(jobTitle, region, _apiKey, ownVacancy = null) {
   const query = `${jobTitle} vacature ${region} salaris arbeidsvoorwaarden`;
 
   // Stap 1: Haal zoekresultaten op via Jina AI (gratis, geen API key nodig)
@@ -179,7 +176,7 @@ Schrijf max 4 korte alinea\'s. Gebruik bullet points waar nuttig. Vermeld als da
         content: `Zoekresultaten voor "${jobTitle} vacature ${region}":\n\n${snippets}${ownContext}`,
       }],
     },
-    apiKey,
+    null,
   );
   return data.content?.[0]?.text?.trim() || '';
 }
