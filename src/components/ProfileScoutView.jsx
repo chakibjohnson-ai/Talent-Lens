@@ -39,7 +39,6 @@ Schema: {"functie":null,"synoniemen":[],"locatie":null,"skills":[],"senioriteit"
 export function ProfileScoutView({ user, onGoToBoolean }) {
   const T      = user?.theme || {};
   const accent = T.accent || '#a78bfa';
-  const apiKey = user?.apiKey || '';
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [query,      setQuery]      = useState('');
@@ -96,7 +95,7 @@ export function ProfileScoutView({ user, onGoToBoolean }) {
           system: BOOL_SYS,
           messages: [{ role: 'user', content: prompt }],
         },
-        apiKey,
+        null,
       );
       const raw = data.content?.[0]?.text?.trim() || '{}';
       let parsed_bool;
@@ -150,7 +149,6 @@ export function ProfileScoutView({ user, onGoToBoolean }) {
         style_source:          'filter',
         filter_type:           outreachStyle,
         writing_style_sample:  '',
-        apiKey,
       });
       setOutreachText(text);
     } catch (e) {

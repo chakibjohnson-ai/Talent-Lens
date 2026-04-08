@@ -88,9 +88,6 @@ export const DOMAIN_THEMES = {
 export const DEFAULT_THEME    = DOMAIN_THEMES["morgangreen.nl"];
 export const ALLOWED_DOMAINS  = Object.keys(DOMAIN_THEMES);
 
-// API key uit .env (VITE_ANTHROPIC_API_KEY) — nooit hardcoden in broncode
-export const ANTHROPIC_API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
-
 // Banners — gehost in Supabase Storage (app-assets/Afbeeldingen/)
 export const DOMAIN_BANNER = {
   "morgangreen.nl":      "https://cebpwkavlxipkrqixbab.supabase.co/storage/v1/object/public/app-assets/Afbeeldingen/LinkedIn%20Banner%20Morgan%20Green.png",

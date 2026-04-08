@@ -114,7 +114,7 @@ export function BooleanView({ user }) {
             { role: "assistant", content: "{" },
           ],
         },
-        user.apiKey,
+        null,
       );
       const raw = resp.content?.filter(b => b.type === "text").map(b => b.text).join("") || "";
       const txt = raw.trimStart().startsWith("{") ? raw : "{" + raw;

@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { generateOutreach, fetchWritingStyle, CHANNELS, FILTER_TYPES } from '../services/ghostwriterService';
-import { ANTHROPIC_API_KEY } from '../constants/appConstants';
-
 function Spin() {
   return <span style={{display:"inline-block",width:11,height:11,border:"2px solid rgba(255,255,255,0.25)",borderTopColor:"white",borderRadius:"50%",animation:"s 0.7s linear infinite",marginRight:6}}/>;
 }
@@ -9,7 +7,6 @@ function Spin() {
 export function OutreachView({ user }) {
   const T      = user?.theme || {};
   const accent = T.accent || '#4DC87A';
-  const apiKey = user?.apiKey || ANTHROPIC_API_KEY;
 
   // Vacature invoer
   const [functie,  setFunctie]  = useState('');
@@ -55,7 +52,6 @@ export function OutreachView({ user }) {
         style_source:         styleSource,
         filter_type:          filterType,
         writing_style_sample: writingSample,
-        apiKey,
       });
       setOutreachText(tekst);
     } catch (e) {

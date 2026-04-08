@@ -62,7 +62,7 @@ function AppShell() {
       const theme  = Constants.DOMAIN_THEMES[domain] || Constants.DEFAULT_THEME;
       sbGetProfile(session.access_token).then(profile => {
         setUser({ email, domain, isAdmin: profile?.is_org_admin || profile?.is_team_admin || false,
-                  apiKey: Constants.ANTHROPIC_API_KEY, accessToken: session.access_token, profile, theme });
+                  accessToken: session.access_token, profile, theme });
       });
     } catch { /* ongeldige sessie */ }
   }, []);
